@@ -1,10 +1,8 @@
 package route_test
 
 import (
-	"code.cloudfoundry.org/cli/cf/api/apifakes"
 	"code.cloudfoundry.org/cli/cf/api/spaces/spacesfakes"
 	"code.cloudfoundry.org/cli/cf/flags"
-	"code.cloudfoundry.org/cli/cf/models"
 	"code.cloudfoundry.org/cli/cf/requirements"
 	"code.cloudfoundry.org/cli/cf/requirements/requirementsfakes"
 	testcmd "code.cloudfoundry.org/cli/cf/util/testhelpers/commands"
@@ -90,28 +88,6 @@ var _ = Describe("delete-orphaned-routes command", func() {
 
 		It("passes when confirmation is provided", func() {
 			var ui *testterm.FakeUI
-			domain := models.DomainFields{Name: "example.com"}
-			domain2 := models.DomainFields{Name: "cookieclicker.co"}
-
-			app1 := models.ApplicationFields{Name: "dora"}
-
-			routeRepo.ListRoutesStub = func(cb func(models.Route) bool) error {
-				route := models.Route{}
-				route.GUID = "route1-guid"
-				route.Host = "hostname-1"
-				route.Domain = domain
-				route.Apps = []models.ApplicationFields{app1}
-
-				route2 := models.Route{}
-				route2.GUID = "route2-guid"
-				route2.Host = "hostname-2"
-				route2.Domain = domain2
-
-				cb(route)
-				cb(route2)
-
-				return nil
-			}
 
 			ui, _ = callDeleteOrphanedRoutes("y", []string{}, requirementsFactory, spaceRepo)
 
@@ -123,43 +99,20 @@ var _ = Describe("delete-orphaned-routes command", func() {
 				[]string{"OK"},
 			))
 
-			Expect(spaceRepo.DeleteCallCount()).To(Equal(1))
+			Expect(spaceRepo.DeleteUnmappedRoutesCallCount()).To(Equal(1))
 		})
 
-		// It("passes when the force flag is used", func() {
-		// 	var ui *testterm.FakeUI
-		//
-		// 	routeRepo.ListRoutesStub = func(cb func(models.Route) bool) error {
-		// 		route := models.Route{}
-		// 		route.Host = "hostname-1"
-		// 		route.Domain = models.DomainFields{Name: "example.com"}
-		// 		route.Apps = []models.ApplicationFields{
-		// 			{
-		// 				Name: "dora",
-		// 			},
-		// 		}
-		//
-		// 		route2 := models.Route{}
-		// 		route2.GUID = "route2-guid"
-		// 		route2.Host = "hostname-2"
-		// 		route2.Domain = models.DomainFields{Name: "cookieclicker.co"}
-		//
-		// 		cb(route)
-		// 		cb(route2)
-		//
-		// 		return nil
-		// 	}
-		//
-		// 	ui, _ = callDeleteOrphanedRoutes("", []string{"-f"}, requirementsFactory, routeRepo)
-		//
-		// 	Expect(len(ui.Prompts)).To(Equal(0))
-		//
-		// 	Expect(ui.Outputs()).To(ContainSubstrings(
-		// 		[]string{"Deleting route", "hostname-2.cookieclicker.co"},
-		// 		[]string{"OK"},
-		// 	))
-		// 	Expect(routeRepo.DeleteCallCount()).To(Equal(1))
-		// 	Expect(routeRepo.DeleteArgsForCall(0)).To(Equal("route2-guid"))
-		// })
+		It("passes when the force flag is used", func() {
+			var ui *testterm.FakeUI
+
+			ui, _ = callDeleteOrphanedRoutes("", []string{"-f"}, requirementsFactory, spaceRepo)
+
+			Expect(len(ui.Prompts)).To(Equal(0))
+
+			Expect(ui.Outputs()).To(ContainSubstrings(
+				[]string{"OK"},
+			))
+			Expect(spaceRepo.DeleteUnmappedRoutesCallCount()).To(Equal(1))
+		})
 	})
 })
